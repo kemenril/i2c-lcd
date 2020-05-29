@@ -11,7 +11,7 @@ Two simple Python scripts, **lcd**, and **lcdd**.  The former takes information 
 ### Set up
 You need the following things on your system:
    * *Python 3*, or so
-   * *I2C_LCD_driver*, which I got from [here](https://gist.github.com/DenisFromHR/cc863375a6e19dce359d)
+   * *I2C_LCD_driver*, which I got from [here](https://gist.github.com/DenisFromHR/cc863375a6e19dce359d) ([direct raw link](https://gist.githubusercontent.com/DenisFromHR/cc863375a6e19dce359d/raw/36b82e787450d127f5019a40e0a55b08bd43435a/RPi_I2C_driver.py))
    On my system, this driver is installed in **/usr/local/lib/lcd**, but you can put it elsewhere and just change the *sys.path.insert* at the top of the **lcdd** file.
    * The contents of this repository.
    
