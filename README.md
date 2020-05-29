@@ -25,7 +25,33 @@ Once you have that, do the following:
      * The correct locations for the PID file and interface pipe for the server to use
      * If necessary, the place where you installed *I2C_LCD_driver*
      
+### Usage
 
+Just run lcd directly.  In its simplest form, it should work much like echo.  You can say, for example:
+
+*lcd This is a test.*
+
+... or:
+
+*lcd \`uptime\`*
+
+```usage: lcd [-h] [-r] [-x] [-l [LINE]] [Text [Text ...]]
+
+Control an I2C LCD display
+
+positional arguments:
+  Text                  Text to display.
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -r, --refresh         Just redraw what is supposed to be on the display
+                        currently.
+  -x, --exit            Stop the currently running display server, if one
+                        exists.
+  -l [LINE], --line [LINE]
+                        The line on which the text should be displayed.
+```
+                        
 ### Hey, why not just use *I2C_LCD_driver* directly
 
 Because not everything is (or should be) written in Python.  Bourne is a noble language and most of the data I want the LCD to show is really easy to get that way. Also because when the driver initializes on my system, it appears to clear the screen.  By making a single, persisitent process that manages the display, I can share it among various different sources of information without always clearing everything else off.
