@@ -1,0 +1,94 @@
+#!/usr/bin/python3
+import sys
+import os
+import pickle
+import signal
+import configparser
+
+configFile = "/etc/lcd.conf"
+config = configparser.ConfigParser()
+try:
+    config.read(configFile)
+except Exception as e:
+    print("Problem reading configuration from " + configFile + "\n")
+    print(e)
+    sys.exit(1)
+
+
+#We need the I2C_LCD_driver module
+#Originally this module came from 
+# https://gist.github.com/DenisFromHR/cc863375a6e19dce359d
+if  config.get('Global','lcd-driver', fallback=False):
+    sys.path.insert(0,config['Global']['lcd-driver'])
+
+import I2C_LCD_driver
+
+#Now go ahead and just update the PID file.
+pidwriter = open(config['Global']['pidfile'],"w")
+pidwriter.write(str(os.getpid())+"\n")
+pidwriter.close()
+
+
+#Create the pipe if it's not there.  Open it for reading
+if not os.path.exists(config['Global']['interface']):
+    os.mkfifo(config['Global']['interface'])
+
+#Maybe handle some signals
+#These are probably the only way we'll exit.
+def stop(signum,frame):
+    try:
+        control.close()
+        pidwriter.close()
+    except:
+        pass
+    sys.exit(0)
+signal.signal(signal.SIGINT,stop)
+signal.signal(signal.SIGTERM,stop)
+
+#In fact, we'll just do display updates by signal.
+#This way we can support a "refresh" by way of SIGHUP.
+def update(signum,frame):
+    global config
+    global data
+    #In this case, we actually need to do the wrapping ourselves.
+    if 'longline' in data:
+        for cur in range(1,int(config['Global']['lines'])+1):
+            eol = int(config['Global']['columns'])*cur
+            sol = eol-int(config['Global']['columns'])
+            panel.lcd_display_string(data['longline'][sol:eol],cur)
+    else:
+        for cur in range(1,int(config['Global']['lines'])+1):
+            panel.lcd_display_string(data[cur],cur)
+signal.signal(signal.SIGHUP,update)
+
+#Start with all possible` lines off.
+data = {}
+for cur in range(1,int(config['Global']['lines'])+1):
+    data[cur] = ""
+
+#Initialize the display
+panel = I2C_LCD_driver.lcd()
+panel.lcd_clear()
+
+#This will be where we get our IPC
+control = open(config['Global']['interface'],"rb")
+
+while True:
+    if control.peek(1): #New data is available
+        try:
+            newdata = pickle.load(control)
+        except Exception as e:
+            print(e)
+            continue
+        #One long line to display.
+        if 'longline' in newdata:  
+            data['longline'] = newdata['longline']
+        else:
+            data.pop('longline',False)
+            for cur in range(1,int(config['Global']['lines'])+1):
+                if cur in newdata:   #Only change data that exists in the update
+                    data[cur] = newdata[cur]
+        #The display updater defined in the signal handler is good enough.
+        os.kill(os.getpid(),signal.SIGHUP)
+
+

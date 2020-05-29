@@ -1,0 +1,111 @@
+#!/usr/bin/python3
+import sys
+import os
+import fcntl
+import time
+import pickle
+import signal
+import argparse
+import configparser
+
+configFile = "/etc/lcd.conf"
+config = configparser.ConfigParser()
+try:
+    config.read(configFile)
+except Exception as e:
+    print("Problem reading configuration from " + configFile + "\n")
+    print(e)
+    sys.exit(1)
+
+oP = argparse.ArgumentParser(description="Control an I2C LCD display")
+oP.add_argument('-r','--refresh',dest='refresh',action='store_true',help='Just redraw what is supposed to be on the display currently.')
+oP.add_argument('-x','--exit',dest='exit',action='store_true',help='Stop the currently running display server, if one exists.')
+oP.add_argument('-l','--line',nargs='?',dest='line',type=int,help='The line on which the text should be displayed.')
+oP.add_argument('Text',nargs='*',help='Text to display.')
+opts = oP.parse_args()
+
+#All of our "positional" parameters are actually the same argument.
+opts.Text = " ".join(opts.Text)
+
+if not opts.Text and not opts.refresh and not opts.exit:
+    print("Either supply text to print, or a command to send to the server.\n")
+    sys.exit(1)
+
+#Server PID will be kept here
+spid = ''
+
+#Get current server PID, if any.  It will still be a string, and it is more
+# often used as such at least when debuggin, so we'll convert it to an integer 
+# when we need to.
+def getspid():
+    global spid
+    global config
+    if os.path.isfile(config['Global']['pidfile']):
+        pidreader = open(config['Global']['pidfile'],"r")
+        spid = pidreader.readline().rstrip()
+        pidreader.close()
+        return True
+    return False
+
+#Is the server alive
+def salive():
+    global spid
+    if spid != '':
+        #Honestly, there's not good way to do this in python, so...
+        if os.path.exists("/proc/" + spid):
+            return True
+    return False
+
+#Start the server
+def sstart(): 
+    global config
+    svr = os.fork()
+    if not svr:
+        try:
+            os.execl(config['Global']['server'],config['Global']['server'])
+        except:
+            pass
+        sys.exit(1)
+    time.sleep(2)
+    return svr
+
+#Commands can be sent to the server process using signals
+def sendCmd(sig,desc):
+    if spid != '':
+        print("Sending " + desc + " to server: " + spid + "\n")
+        try:
+            os.kill(int(spid),sig)
+        except Exception as e:
+            return(1)
+    return(0)
+
+if opts.exit:
+    getspid()
+    sys.exit(sendCmd(signal.SIGTERM,"TERM signal"))
+
+if opts.refresh:
+    getspid()
+    sys.exit(sendCmd(signal.SIGHUP,"refresh command"))
+
+#Either set us up to use the running server, or a new one.
+if not getspid() or not salive():
+    spid = sstart()
+if not os.path.exists(config['Global']['interface']):
+    print("FIFO for communication with server not found, " + config['Global']['interface'] + "\n")
+
+control = open(config['Global']['interface'],"wb")
+command = {}
+
+if opts.line:
+    command[opts.line] = opts.Text
+else:
+    command['longline'] = opts.Text
+
+fcntl.flock(control,fcntl.LOCK_EX)
+pickle.dump(command,control)
+control.flush()
+fcntl.flock(control,fcntl.LOCK_UN)
+
+control.close()
+
+
