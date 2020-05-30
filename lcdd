@@ -50,15 +50,17 @@ signal.signal(signal.SIGTERM,stop)
 def update(signum,frame):
     global config
     global data
+    lines = int(config['Global']['lines'])
+    columns = int(config['Global']['columns'])
     #In this case, we actually need to do the wrapping ourselves.
     if 'longline' in data:
-        for cur in range(1,int(config['Global']['lines'])+1):
-            eol = int(config['Global']['columns'])*cur
-            sol = eol-int(config['Global']['columns'])
-            panel.lcd_display_string(data['longline'][sol:eol],cur)
+        for cur in range(1,lines+1):
+            eol = columns*cur
+            sol = eol-columns
+            panel.lcd_display_string(data['longline'][sol:eol].ljust(columns),cur)
     else:
         for cur in range(1,int(config['Global']['lines'])+1):
-            panel.lcd_display_string(data[cur],cur)
+            panel.lcd_display_string(data[cur].ljust(columns),cur)
 signal.signal(signal.SIGHUP,update)
 
 #Start with all possible` lines off.
