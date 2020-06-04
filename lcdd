@@ -1,6 +1,8 @@
 #!/usr/bin/python3
 import sys
 import os
+import pwd
+import grp
 import pickle
 import signal
 import configparser
@@ -32,6 +34,10 @@ pidwriter.close()
 #Create the pipe if it's not there.  Open it for reading
 if not os.path.exists(config['Global']['interface']):
     os.mkfifo(config['Global']['interface'])
+
+#Make sure ownership and permissions are correct
+os.chown(config['Global']['interface'],pwd.getpwnam(config['Global']['ifowner'])[2],grp.getgrnam(config['Global']['ifgroup'])[2])
+os.chmod(config['Global']['interface'],int(config['Global']['ifmode']))
 
 #Maybe handle some signals
 #These are probably the only way we'll exit.
@@ -74,6 +80,8 @@ panel.lcd_clear()
 
 #This will be where we get our IPC
 control = open(config['Global']['interface'],"rb")
+
+
 
 while True:
     if control.peek(1): #New data is available
