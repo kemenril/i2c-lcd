@@ -67,7 +67,7 @@ def sstart():
             pass
         sys.exit(1)
     time.sleep(2)
-    return svr
+    return str(svr)
 
 #Commands can be sent to the server process using signals
 def sendCmd(sig,desc):
@@ -81,11 +81,11 @@ def sendCmd(sig,desc):
 
 if opts.exit:
     getspid()
-    sys.exit(sendCmd(signal.SIGTERM,"TERM signal"))
+    sys.exit(sendCmd(signal.SIGTERM,'TERM signal'))
 
 if opts.refresh:
     getspid()
-    sys.exit(sendCmd(signal.SIGHUP,"refresh command"))
+    sys.exit(sendCmd(signal.SIGHUP,'refresh command'))
 
 #Either set us up to use the running server, or a new one.
 if not getspid() or not salive():
@@ -93,14 +93,17 @@ if not getspid() or not salive():
 if not os.path.exists(config['Global']['interface']):
     print("FIFO for communication with server not found, " + config['Global']['interface'] + "\n")
 
-control = open(config['Global']['interface'],"wb")
 command = {}
-
 if opts.line:
     command[opts.line] = opts.Text
 else:
     command['longline'] = opts.Text
 
+#This needs to happen before the pipe is opened, since the open will block until
+# the remote end picks up.
+sendCmd(signal.SIGUSR1,'update')
+
+control = open(config['Global']['interface'],"wb")
 fcntl.flock(control,fcntl.LOCK_EX)
 pickle.dump(command,control)
 control.flush()

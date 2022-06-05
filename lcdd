@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 import sys
 import os
+import time
 import pwd
 import grp
 import pickle
@@ -37,7 +38,7 @@ if not os.path.exists(config['Global']['interface']):
 
 #Make sure ownership and permissions are correct
 os.chown(config['Global']['interface'],pwd.getpwnam(config['Global']['ifowner'])[2],grp.getgrnam(config['Global']['ifgroup'])[2])
-os.chmod(config['Global']['interface'],int(config['Global']['ifmode']))
+os.chmod(config['Global']['interface'],int(config['Global']['ifmode'],8))
 
 #Maybe handle some signals
 #These are probably the only way we'll exit.
@@ -53,7 +54,7 @@ signal.signal(signal.SIGTERM,stop)
 
 #In fact, we'll just do display updates by signal.
 #This way we can support a "refresh" by way of SIGHUP.
-def update(signum,frame):
+def refresh(signum,frame):
     global config
     global data
     lines = int(config['Global']['lines'])
@@ -65,9 +66,52 @@ def update(signum,frame):
             sol = eol-columns
             panel.lcd_display_string(data['longline'][sol:eol].ljust(columns),cur)
     else:
-        for cur in range(1,int(config['Global']['lines'])+1):
-            panel.lcd_display_string(data[cur].ljust(columns),cur)
-signal.signal(signal.SIGHUP,update)
+        for cur in range(1,lines+1):
+            panel.lcd_display_string(data[cur][0:columns-1].ljust(columns),cur)
+signal.signal(signal.SIGHUP,refresh)
+
+#This one gets the data from the client, updates the local structure, and calls
+# refresh for us.
+def update(signum,frame):
+    nerr = 0
+    global config
+    global data
+    control = open(config['Global']['interface'],"rb")
+    frame = b''
+    while True:
+        try:
+            frame += control.read()
+        except Exception as e:
+            print(e)
+            print("Can't read update.  Leaving update handler.")
+            control.close()
+            return
+        try: 
+            newdata = pickle.loads(frame)
+        except Exception as e:
+            print(e)
+            nerr += 1
+            print("Try " + str(nerr))
+            if err < int(config['Global']['maxerr']):
+                continue
+            else:
+                print("Malformed update.  Leaving update handler.")
+                control.close()
+                return
+        #Got one.
+        control.close()
+        if 'longline' in newdata:
+            data['longline'] = newdata['longline']
+        else:
+            data.pop('longline',False)
+            for cur in range(1,int(config['Global']['lines'])+1):
+                    if cur in newdata:  #... then update the data object.
+                        data[cur] = newdata[cur]
+        break
+
+    os.kill(os.getpid(),signal.SIGHUP)     
+
+signal.signal(signal.SIGUSR1,update)
 
 #Start with all possible` lines off.
 data = {}
@@ -78,27 +122,6 @@ for cur in range(1,int(config['Global']['lines'])+1):
 panel = I2C_LCD_driver.lcd()
 panel.lcd_clear()
 
-#This will be where we get our IPC
-control = open(config['Global']['interface'],"rb")
-
-
-
 while True:
-    if control.peek(1): #New data is available
-        try:
-            newdata = pickle.load(control)
-        except Exception as e:
-            print(e)
-            continue
-        #One long line to display.
-        if 'longline' in newdata:  
-            data['longline'] = newdata['longline']
-        else:
-            data.pop('longline',False)
-            for cur in range(1,int(config['Global']['lines'])+1):
-                if cur in newdata:   #Only change data that exists in the update
-                    data[cur] = newdata[cur]
-        #The display updater defined in the signal handler is good enough.
-        os.kill(os.getpid(),signal.SIGHUP)
-
+    time.sleep(30)
 
