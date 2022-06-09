@@ -25,7 +25,7 @@ Once you have that, do the following:
   1. Put the scripts anywhere you like, preferably in the system path.  Make them executable.  
   1. Edit the configuration file to contain:
      * The correct dimensions for your LCD
-     * The device address of your LCD (see above for how to find it) 
+     * The device address of your LCD (see above for how to find it), and bus number if it's different from the default. 
      * The correct location of the server script
      * The correct locations for the PID file and interface pipe for the server to use
      * If necessary, the place where you installed *I2C_LCD_driver*
