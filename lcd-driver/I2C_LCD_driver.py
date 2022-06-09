@@ -28,7 +28,7 @@ import smbus
 from time import sleep
 
 class i2c_device:
-   def __init__(self, addr, port=I2CBUS):
+   def __init__(self, addr, port):
       self.addr = addr
       self.bus = smbus.SMBus(port)
 
@@ -108,8 +108,8 @@ Rs = 0b00000001 # Register select bit
 
 class lcd:
    #initializes objects and lcd
-   def __init__(self, addr=ADDRESS):
-      self.lcd_device = i2c_device(addr)
+   def __init__(self, addr=ADDRESS, bus=I2CBUS):
+      self.lcd_device = i2c_device(addr, bus)
 
       self.lcd_write(0x03)
       self.lcd_write(0x03)
