@@ -11,10 +11,10 @@ Two simple Python scripts, **lcd**, and **lcdd**.  The former takes information 
 ### Set up
 You need the following things on your system:
    * *Python 3*, or so
-   * *I2C_LCD_driver*, which I got from [here](https://gist.github.com/DenisFromHR/cc863375a6e19dce359d) ([direct raw link](https://gist.githubusercontent.com/DenisFromHR/cc863375a6e19dce359d/raw/36b82e787450d127f5019a40e0a55b08bd43435a/RPi_I2C_driver.py))
-   On my system, this driver is installed in **/usr/local/lib/lcd**, but you can put it elsewhere and change the line in the configuration that locates it.  If it's in *sys.path*, just comment that line out in the configuration and it will be fine.  
+   * *I2C_LCD_driver*, which I got from [here](https://gist.github.com/DenisFromHR/cc863375a6e19dce359d) ([direct raw link](https://gist.githubusercontent.com/DenisFromHR/cc863375a6e19dce359d/raw/36b82e787450d127f5019a40e0a55b08bd43435a/RPi_I2C_driver.py)), but there's a slightly modified version in the lcd-driver subdirectory which you should use instead.
+   On my system, this driver is installed in **/usr/local/lib/lcd**, but you can put it elsewhere and change the line in the configuration that locates it.  If it's in *sys.path*, just comment that line out in the configuration and it will be fine.  The version available in this repository is modified slightly to allows us to pass a device address in when we instantiate the driver.  This address may now be configured in *lcd.conf* so that you won't need to edit the code of the driver directly.
    
-**Note:** At least on my Recon Sentinel, the I2C device address for the LCD is 0x3F. You may need to edit the driver file to reflect the address of your own display.  The driver in the repo over there uses a display at 0x27.  In order to find the correct device address, apparently one can run something like *i2cdetect -y 1* on a system with the proper utilities installed, where 1 (being the lowest, perhaps that's not where the device is attached on your system) is the i2c bus number.  The output of that command will contain a table.  You're looking for addresses in that table which don't report -- or UU.  One of those should be your display.
+**Note:** At least on my Recon Sentinel, the I2C device address for the LCD is 0x3F. The driver uses a display at 0x27 by default.  In order to find the correct device address, apparently one can run something like *i2cdetect -y 1* on a system with the proper utilities installed, where 1 (being the lowest, perhaps that's not where the device is attached on your system) is the i2c bus number.  The output of that command will contain a table.  You're looking for addresses in that table which don't report *--* or *UU*.  One of those should be your display.
 
 
    * The contents of this repository.
@@ -24,7 +24,8 @@ Once you have that, do the following:
   1. Place the *lcd.conf file in your **/etc** directory.  
   1. Put the scripts anywhere you like, preferably in the system path.  Make them executable.  
   1. Edit the configuration file to contain:
-     * The correct dimensions for your LCD 
+     * The correct dimensions for your LCD
+     * The device address of your LCD (see above for how to find it) 
      * The correct location of the server script
      * The correct locations for the PID file and interface pipe for the server to use
      * If necessary, the place where you installed *I2C_LCD_driver*

@@ -119,7 +119,11 @@ for cur in range(1,int(config['Global']['lines'])+1):
     data[cur] = ""
 
 #Initialize the display
-panel = I2C_LCD_driver.lcd()
+if config.get('Global','address',fallback=False):
+    panel = I2C_LCD_driver.lcd(int(config['Global']['address'],16))
+else:
+    panel = I2C_LCD_driver.lcd()
+
 panel.lcd_clear()
 
 while True:
