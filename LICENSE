@@ -1,7 +1,7 @@
 
 I2C_LCD_driver.py is covered by The GNU General Public License.  It contains
-a single change from the distribution version which permits us to pass the 
-device address of the display into the constructor for the lcd class.
+changes from the distribution version which permits us to pass the device 
+address/bus of the display into the constructor for the lcd class.
 
 All other software in this repository is covered by The Unlicense:
 
